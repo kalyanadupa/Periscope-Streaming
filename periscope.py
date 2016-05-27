@@ -11,10 +11,14 @@ from dateutil import tz
 from queue import Queue
 from threading import Thread
 import tweepy
+from tweepy import Stream
 from tweepy import OAuthHandler
+from tweepy.streaming import StreamListener
+import time
 import configparser
 import urllib
 from ttp import ttp
+import codecs
 
 # Contants.
 
@@ -36,20 +40,26 @@ URL_PATTERN = re.compile(r'(http://|https://|)(www.|)(periscope.tv|perisearch.ne
 class Listener(tweepy.StreamListener):
 
     tweetCounter =  0 
+    q = Queue()
 
     def on_status(self, status):
 
         Listener.tweetCounter = Listener.tweetCounter + 1
         print(Listener.tweetCounter)
         try:
+            # print(status.encode('utf-8'))
             t = "u\""+status.author.screen_name+"\""
             # print("screen_name= "+t)
             t = "u\""+status.text+"\""
             # print("tweet=" +t)            
             # print("screen_name= "+status.author.screen_name.encode('utf-8')+ " tweet=" +status.text.encode('utf-8'))
             # tweets.append(status.text.encode("utf-8"))
+            json_str = json.dumps(status._json)
+            # print(json_str)
+                       
             print("calling vidDownload...")
-            vidDownload(status.text.encode("utf-8"))
+
+            vidDownload(json_str, status.text.encode("utf-8"))
             print("Vid D done")
         except Exception as e: 
             print(str(e))
@@ -59,6 +69,10 @@ class Listener(tweepy.StreamListener):
         else:
             print('maxnum = '+str(Listener.tweetCounter))
         return False
+
+
+
+
 
 class Worker(Thread):
     def __init__(self, thread_pool):
@@ -162,12 +176,18 @@ def download_chunk(url, headers, path):
             handle.write(block)
 
 
-def process(pURL):
+def process(hash_url, pURL):
+
+    if checkLive(pURL):
+        print(pURL+" is added to queue")
+        Listener.q.put(str(hash_url))
+        Listener.q.put(pURL)
+        return
 
     # Defaults arg flag settings.
     url_parts_list = []
     ffmpeg = True
-    convert = False
+    convert = True
     clean = False
     rotate = False
     agent_mocking = False
@@ -246,7 +266,7 @@ def process(pURL):
                 broadcast_start_time_dt.hour, broadcast_start_time_dt.minute, broadcast_start_time_dt.second)
             name = "{} ({})".format(broadcast_public['broadcast']['username'], broadcast_start_time)
 
-        name = sanitize(name)
+        name = sanitize(str(hash_url)+name)
 
         # Get ready to start capturing.
         if broadcast_public['broadcast']['state'] == 'RUNNING':
@@ -400,6 +420,12 @@ def process(pURL):
                     except:
                         stdout("Failed to delete {}.ts.".format(name))
 
+    
+    if not Listener.q.empty():
+        qHash = Listener.q.get()
+        qURL = Listener.q.get()
+        print(qURL + " is removed from Queue")
+        process(qHash,qURL)                 
     # sys.exit(0)
 
 
@@ -419,10 +445,10 @@ def getTweetsByText(stopAtNumber):
     Listener.stopAt = stopAtNumber
     auth = login()
     streaming_api = tweepy.streaming.Stream(auth, Listener(), timeout=60)
-    streaming_api.filter(track=["#periscope emergency","#periscope event","#periscope evacuation","#periscope news"])
-    # streaming_api.filter(track=["#periscope"])
+    # streaming_api.filter(track=["#periscope emergency","#periscope event","#periscope evacuation","#periscope news"])
+    streaming_api.filter(track=["#periscope"])
 
-def vidDownload(tweet):
+def vidDownload(saveThis, tweet):
     p = ttp.Parser()    
     try:
         r = p.parse(tweet.decode('utf-8'))
@@ -432,11 +458,37 @@ def vidDownload(tweet):
             resp = urllib.request.urlopen(link)
             print(resp.url)
             if "https://www.periscope.tv/w/" in resp.url:
-                process(resp.url)
+                saveFile = open('twitDB2.txt','a')
+                hash_url = abs(hash(resp.url))
+                saveFile.write(str(hash_url))
+                saveFile.write('\n')
+                saveFile.write(saveThis)
+                saveFile.write('\n')
+                saveFile.close() 
+                process(hash_url,resp.url)
     except Exception as e:
         print(str(e))
         pass 
 
+def checkLive(pURL):  
+    if "https://www.periscope.tv/w/" in pURL:
+        token = pURL[27:]
+        streamu = "https://api.periscope.tv/api/v2/getAccessPublic?token="+token
+        # print("streamu - " +streamu)
+        sCode = requests.get(streamu)
+        if sCode.status_code == 200:
+            sData = sCode.text
+            # print("sData - " + sData)
+            if "hls_url" in sData:
+                return True
+            else:
+                return False
+        else:
+            return False        
+    else:
+        return False                
+
 
 if __name__ == "__main__":
+
     getTweetsByText(20)
