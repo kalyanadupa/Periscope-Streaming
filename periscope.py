@@ -420,7 +420,6 @@ def process(hash_url, pURL):
                     except:
                         stdout("Failed to delete {}.ts.".format(name))
 
-    
     if not Listener.q.empty():
         qHash = Listener.q.get()
         qURL = Listener.q.get()
