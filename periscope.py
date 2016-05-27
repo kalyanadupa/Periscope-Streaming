@@ -64,11 +64,7 @@ class Listener(tweepy.StreamListener):
         except Exception as e: 
             print(str(e))
             pass    
-        if Listener.tweetCounter < Listener.stopAt:
-            return True
-        else:
-            print('maxnum = '+str(Listener.tweetCounter))
-        return False
+        return True
 
 
 
@@ -444,8 +440,8 @@ def getTweetsByText(stopAtNumber):
     Listener.stopAt = stopAtNumber
     auth = login()
     streaming_api = tweepy.streaming.Stream(auth, Listener(), timeout=60)
-    # streaming_api.filter(track=["#periscope emergency","#periscope event","#periscope evacuation","#periscope news"])
-    streaming_api.filter(track=["#periscope"])
+    streaming_api.filter(track=["#periscope emergency","#periscope event","#periscope evacuation","#periscope news"])
+    # streaming_api.filter(track=["#periscope"])
 
 def vidDownload(saveThis, tweet):
     p = ttp.Parser()    
