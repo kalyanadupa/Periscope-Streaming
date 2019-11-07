@@ -427,10 +427,10 @@ def process(hash_url, pURL):
 
 
 def login():
-    CONSUMER_KEY = 'laNbHK9rHTSN3VDjGjxKzGVlS'
-    CONSUMER_SECRET = '75usGshLnyRxGBa1kmgIMHS2GDQrjBG3ENzuDqJ2poT6nDpwv5'
-    ACCESS_TOKEN = '120044061-y5OLv9WBCCy810uq2TD7q9GqdZ15KoAYmEfGbvVc'
-    ACCESS_TOKEN_SECRET = 'HaXtD7ZRZrKMMGPGglaeXGGCa7Dzw0HE3jZ1oZbRSE0qM'
+    CONSUMER_KEY = ''
+    CONSUMER_SECRET = ''
+    ACCESS_TOKEN = ''
+    ACCESS_TOKEN_SECRET = ''
 
     auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
     auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
